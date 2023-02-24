@@ -1,8 +1,11 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+use std::backtrace::Backtrace;
+
 use bellman::groth16;
 use bls12_381::Bls12;
+use libc::{exit, raise, signal, EXIT_FAILURE, SIGSEGV, SIGTRAP};
 
 pub mod assets;
 pub mod errors;
@@ -85,4 +88,28 @@ impl Sapling {
     fn load_params(bytes: &[u8]) -> groth16::Parameters<Bls12> {
         groth16::Parameters::read(bytes, false).unwrap()
     }
+}
+
+/// # Safety
+///
+/// This function uses libc functions
+pub unsafe fn display_trace() {
+    let _ = dbg!(Backtrace::force_capture());
+    exit(EXIT_FAILURE);
+}
+
+/// # Safety
+///
+/// This function uses libc functions
+pub unsafe fn init_handler() {
+    signal(SIGSEGV, display_trace as usize);
+    // Rust release mode throws this instead of SEGFAULTV, not sure why yet
+    signal(SIGTRAP, display_trace as usize);
+}
+
+/// # Safety
+///
+/// This function uses libc functions
+pub unsafe fn trigger_segfault() {
+    raise(SIGSEGV);
 }

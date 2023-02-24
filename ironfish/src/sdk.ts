@@ -1,6 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+import { initSegfaultHandler, triggerSeg, triggerSeg2 } from '@ironfish/rust-nodejs'
 import {
   Config,
   ConfigOptions,
@@ -183,6 +184,8 @@ export class IronfishSdk {
     autoSeed?: boolean
     privateIdentity?: PrivateIdentity
   } = {}): Promise<IronfishNode> {
+    // triggerSeg()
+    // triggerSeg2()
     const webSocket = WebSocketClient as IsomorphicWebSocketConstructor
 
     const node = await IronfishNode.init({

@@ -4,7 +4,9 @@
 
 use std::fmt::Display;
 
+use ironfish_rust::init_handler;
 use ironfish_rust::keys::Language;
+use ironfish_rust::trigger_segfault;
 use ironfish_rust::PublicAddress;
 use ironfish_rust::SaplingKey;
 use napi::bindgen_prelude::*;
@@ -165,4 +167,28 @@ impl ThreadPoolHandler {
 #[napi]
 pub fn is_valid_public_address(hex_address: String) -> bool {
     PublicAddress::from_hex(&hex_address).is_ok()
+}
+
+/// # Safety
+///
+/// This function uses libc functions
+#[napi]
+pub unsafe fn init_segfault_handler() {
+    init_handler()
+}
+
+/// # Safety
+///
+/// This function uses libc functions
+#[napi]
+pub unsafe fn trigger_seg() {
+    trigger_segfault()
+}
+
+/// # Safety
+///
+/// This function uses libc functions
+#[napi]
+pub unsafe fn trigger_seg2() {
+    std::ptr::null_mut::<i32>().write(42);
 }
