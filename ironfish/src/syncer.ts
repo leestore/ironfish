@@ -423,21 +423,30 @@ export class Syncer {
 
       if (!headBlock) {
         peer.punish(BAN_SCORE.MAX, 'empty GetBlocks message')
+        // TODO(mat): I think this stopSync makes sense here, and the test needs
+        // to be altered but need to confirm
+        // this.stopSync(peer)
+        return
       }
 
       this.downloadSpeed.add((blocks.length + 1) / (time / 1000))
 
       this.abort(peer)
 
-      // If they sent a full message they have more blocks so
-      // optimistically request the next batch
-      if (blocks.length >= this.blocksPerMessage) {
-        const block = blocks.at(-1) || headBlock
+      const lastBlock = blocks.at(-1) || headBlock
+      const peerHasHigherSequence = peer.sequence
+        ? peer.sequence > lastBlock.header.sequence
+        : false
+      const receivedFullMessage = blocks.length ? blocks.length >= this.blocksPerMessage : false
 
+      // If they sent a full message, or their sequence is higher than the last
+      // block's sequence, they have more blocks so optimistically request the
+      // next batch
+      if (peerHasHigherSequence || receivedFullMessage) {
         blocksPromise = this.getBlocks(
           peer,
-          block.header.sequence,
-          block.header.hash,
+          lastBlock.header.sequence,
+          lastBlock.header.hash,
           this.blocksPerMessage + 1,
         )
       }
@@ -467,8 +476,9 @@ export class Syncer {
         currentHead = block.header.hash
       }
 
-      // They didn't send a full message so they have no more blocks
-      if (blocks.length < this.blocksPerMessage) {
+      // They don't have a higher sequence and did not send a full message, so
+      // they probably have no more blocks
+      if (!peerHasHigherSequence && !receivedFullMessage) {
         break
       }
 

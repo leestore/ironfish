@@ -65,8 +65,10 @@ import { PeerManager } from './peers/peerManager'
 import { TransactionFetcher } from './transactionFetcher'
 import { IsomorphicWebSocketConstructor } from './types'
 import { parseUrl } from './utils/parseUrl'
+import { getBlockSize } from './utils/serializers'
 import {
   MAX_HEADER_LOOKUPS,
+  MAX_MESSAGE_SIZE,
   MAX_REQUESTED_BLOCKS,
   MAX_REQUESTED_HEADERS,
   VERSION_PROTOCOL,
@@ -1064,14 +1066,24 @@ export class PeerNetwork {
       }
     }
 
-    const blocks = await Promise.all(hashes.map((hash) => this.chain.getBlock(hash)))
+    let totalSize = 0
+    const blocks = []
+    // TODO(mat): This should be some function of block size
+    const softMaxSize = Math.trunc(MAX_MESSAGE_SIZE * 0.95)
 
-    const notNullBlocks = blocks.map((block) => {
+    for (const hash of hashes) {
+      const block = await this.chain.getBlock(hash)
       Assert.isNotNull(block)
-      return block
-    })
+      // TODO(mat): Probably add a sanity check that this wouldn't exceed the actual max size
+      totalSize += getBlockSize(block)
+      blocks.push(block)
 
-    return new GetBlocksResponse(notNullBlocks, rpcId)
+      if (totalSize >= softMaxSize) {
+        break
+      }
+    }
+
+    return new GetBlocksResponse(blocks, rpcId)
   }
 
   private onPooledTransactionsRequest(
